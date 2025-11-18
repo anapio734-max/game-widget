@@ -7,7 +7,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    /* light palette (cards) */
     --card-bg: #fff8f2;
     --card-cream: #FFF1E6;
     --text: #3f3a33;
@@ -19,10 +18,9 @@
     --page-bg: linear-gradient(180deg, #FBFAF7 0%, #F6F4EE 100%);
   }
 
-  /* dark-mode overrides (applied when .dark class is on <html>) */
   .dark {
-    --page-bg: linear-gradient(180deg, #0f1912 0%, #121812 100%); /* deep mossy */
-    --card-bg: #fffaf1; /* keep cards light but slightly toned */
+    --page-bg: linear-gradient(180deg, #0f1912 0%, #121812 100%);
+    --card-bg: #fffaf1;
     --card-cream: #F6F2EA;
     --text: #ece9e1;
     --muted: #bfb8ad;
@@ -38,8 +36,6 @@
     font-family:Inter,system-ui,Arial;
     color:var(--text);
     background:var(--page-bg);
-    -webkit-font-smoothing:antialiased;
-    -moz-osx-font-smoothing:grayscale;
     padding:18px;
   }
 
@@ -62,23 +58,53 @@
   }
 
   .card{
-    background: linear-gradient(180deg, var(--card-bg) 0%, var(--card-cream) 100%);
-    border-radius:16px;padding:14px;box-shadow:0 10px 28px var(--shadow);
-    display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden;
+    background: #c2cea7; /* requested background */
+    border-radius:16px;
+    padding:14px;
+    box-shadow:0 10px 28px var(--shadow);
+    display:flex;flex-direction:column;gap:10px;
     transition:transform .22s ease, box-shadow .22s ease;
+    overflow:hidden;
   }
   .card:hover{transform:translateY(-6px); box-shadow:0 24px 48px rgba(0,0,0,0.14)}
-  .cover{height:120px;border-radius:10px;overflow:hidden;background:#f2efe9;display:flex;align-items:center;justify-content:center}
+
+  .cover{height:120px;border-radius:10px;overflow:hidden;background:#f2efe9}
   .cover img{width:100%;height:100%;object-fit:cover;display:block}
-  .title{font-weight:600;font-size:15px;margin:0;color:var(--text)}
-  .meta{font-size:12px;color:var(--muted)}
-  .progressBack{height:12px;border-radius:999px;background:linear-gradient(90deg,#f6f3ef,#efe9df);overflow:hidden;border:1px solid rgba(0,0,0,0.03)}
-  .progressBar{height:12px;border-radius:999px;background:linear-gradient(90deg,var(--moss),#d7e3b8);width:0%;transition:width:700ms cubic-bezier(.2,.8,.2,1)}
-  .statusBadge{padding:6px 9px;border-radius:999px;background:rgba(255,255,255,0.8);font-size:12px;color:var(--muted);border:1px solid rgba(0,0,0,0.04);display:inline-flex;gap:8px;align-items:center}
+
+  /* text inside card */
+  .card, .card * { color: #7a876f !important; }
+
+  .title{font-weight:600;font-size:15px;margin:0}
+  .meta{font-size:12px}
+
+  /* ---------- UPDATED BAR COLORS ---------- */
+  .progressBack{
+    height:12px;
+    border-radius:999px;
+    background:#dde6cf; /* new softer cozy mossy track */
+    border:1px solid rgba(0,0,0,0.06);
+    overflow:hidden;
+  }
+
+  .progressBar{
+    height:12px;
+    border-radius:999px;
+    background:#8ea87f; /* new mossy progress color */
+    width:0%;
+    transition:width 700ms cubic-bezier(.2,.8,.2,1);
+  }
+  /* -------------------------------------- */
+
+  .statusBadge{
+    padding:6px 9px;border-radius:999px;
+    background:rgba(255,255,255,0.8);
+    font-size:12px;
+    border:1px solid rgba(0,0,0,0.04);
+    display:inline-flex;gap:8px;align-items:center
+  }
 
   footer.small{margin-top:18px;font-size:13px;color:var(--muted);text-align:center}
 
-  /* small screens */
   @media (max-width:420px){
     .brand{width:52px;height:52px;font-size:20px}
     .cover{height:100px}
@@ -105,101 +131,94 @@
   </div>
 
 <script>
-/* ---------- THEME HANDLING ---------- */
-/* If the URL contains ?theme=dark -> force dark.
-   Otherwise use prefers-color-scheme to set dark automatically. */
+/* THEME */
 (function applyTheme(){
-  const urlParams = new URLSearchParams(location.search);
-  const forced = urlParams.get('theme');
+  const url = new URLSearchParams(location.search);
+  const forced = url.get('theme');
   if(forced === 'dark'){ document.documentElement.classList.add('dark'); return; }
   if(forced === 'light'){ document.documentElement.classList.remove('dark'); return; }
-  // auto-detect
-  if(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches){
+  if(window.matchMedia('(prefers-color-scheme: dark)').matches){
     document.documentElement.classList.add('dark');
   }
 })();
 
-/* ---------- DATA & RENDER ---------- */
 const DATA_URL = "https://docs.google.com/spreadsheets/d/11SMM610HvJDn1WJBHsQtsTS-Uz9CNMIaRV4YNBPbtBo/gviz/tq?tqx=out:json&sheet=Sheet1";
 
-/* helper to parse gviz wrapper */
-function parseGviz(respText){
-  const jsonText = respText.replace(/^[^\{]*/, '').replace(/\);?$/, '');
-  return JSON.parse(jsonText);
+function parseGviz(t){
+  return JSON.parse(t.replace(/^[^\{]*/, '').replace(/\);?$/, ''));
 }
 
-/* small placeholder image */
 const placeholderImg = "data:image/svg+xml;utf8," + encodeURIComponent(
-  `<svg xmlns='http://www.w3.org/2000/svg' width='600' height='400' viewBox='0 0 600 400'>
+  `<svg xmlns='http://www.w3.org/2000/svg' width='600' height='400'>
     <rect width='100%' height='100%' fill='#f2efe9'/>
-    <text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='#a79d91' font-family='Inter,Arial' font-size='18'>imagem indisponível</text>
+    <text x='50%' y='50%' text-anchor='middle' fill='#a79d91' font-family='Inter' font-size='18'>imagem indisponível</text>
   </svg>`
 );
 
 async function load(){
   try{
-    const res = await fetch(DATA_URL);
-    if(!res.ok) throw new Error('fetch status ' + res.status);
-    const text = await res.text();
+    const text = await (await fetch(DATA_URL)).text();
     const json = parseGviz(text);
     const rows = json.table.rows.map(r => ({
-      titulo:    r.c[0]?.v || "",
-      plataforma:r.c[1]?.v || "",
-      progresso: Math.round((r.c[2]?.v || 0) * 100),
-      horas:     r.c[3]?.v || 0,
-      status:    r.c[4]?.v || "",
-      capa:      r.c[5]?.v || "",
-      nota:      r.c[6]?.v || "",
-      resumo:    r.c[7]?.v || ""
+      titulo: r.c[0]?.v || "",
+      plataforma: r.c[1]?.v || "",
+      progresso: Math.round((r.c[2]?.v || 0)*100),
+      horas: r.c[3]?.v || 0,
+      status: r.c[4]?.v || "",
+      capa: r.c[5]?.v || "",
+      nota: r.c[6]?.v || "",
+      resumo: r.c[7]?.v || ""
     }));
     render(rows);
   }catch(e){
     console.error(e);
-    const grid = document.getElementById('grid');
-    grid.innerHTML = `<div class="card" style="text-align:center">Erro ao carregar dados — ver console.</div>`;
+    document.getElementById('grid').innerHTML =
+      `<div class="card">Erro ao carregar — veja console.</div>`;
   }
 }
 
 function makeBadgeHTML(status){
   const s = (status||"").toLowerCase();
-  let icon = '☘';
-  if(s.includes('platin')) icon = '★';
-  if(s.includes('jog')) icon = '⏱';
-  if(s.includes('conclu')||s.includes('zer')) icon = '✓';
-  return `<span class="statusBadge"><span style="font-weight:600">${status}</span> <span style="opacity:.8;margin-left:6px">${icon}</span></span>`;
+  let icon = '☘'; if(s.includes('platin')) icon='★';
+  if(s.includes('jog')) icon='⏱'; if(s.includes('conclu')||s.includes('zer')) icon='✓';
+  return `<span class="statusBadge"><span style="font-weight:600">${status}</span><span style="opacity:.8">${icon}</span></span>`;
 }
 
 function render(list){
-  const grid = document.getElementById('grid');
-  grid.innerHTML = '';
-  if(!list.length){ grid.innerHTML = `<div class="card">Sem jogos na planilha</div>`; return; }
+  const g = document.getElementById('grid'); g.innerHTML='';
+  if(!list.length){ g.innerHTML='<div class="card">Sem jogos</div>'; return; }
 
-  list.forEach(g=>{
-    const c = document.createElement('div'); c.className='card';
-    const imgSrc = g.capa || placeholderImg;
-    c.innerHTML = `
-      <div class="cover"><img src="${imgSrc}" alt="${escapeHtml(g.titulo)}" onerror="this.onerror=null;this.src='${placeholderImg}'"></div>
-      <div><div class="title">${escapeHtml(g.titulo)}</div><div class="meta">${escapeHtml(g.plataforma)} • ${g.horas ? g.horas+'h' : '—'}</div></div>
+  list.forEach(j=>{
+    const el=document.createElement('div'); el.className='card';
+    el.innerHTML=`
+      <div class="cover"><img src="${j.capa||placeholderImg}" onerror="this.src='${placeholderImg}'"></div>
+      <div><div class="title">${escapeHtml(j.titulo)}</div><div class="meta">${escapeHtml(j.plataforma)} • ${j.horas?j.horas+'h':'—'}</div></div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
-        <div>⭐ ${g.nota || '—'}</div>
-        <div>${makeBadgeHTML(g.status)}</div>
+        <div>⭐ ${j.nota||'—'}</div>
+        <div>${makeBadgeHTML(j.status)}</div>
       </div>
-      <div style="margin-top:8px"><div class="progressBack"><div class="progressBar" style="width:${g.progresso}%"></div></div></div>
-      <div class="meta" style="margin-top:8px">${escapeHtml(g.resumo)}</div>
-    `;
-    grid.appendChild(c);
+      <div style="margin-top:8px"><div class="progressBack"><div class="progressBar" style="width:${j.progresso}%"></div></div></div>
+      <div class="meta" style="margin-top:8px">${escapeHtml(j.resumo)}</div>`;
+    g.appendChild(el);
   });
 
-  // animate bars
-  requestAnimationFrame(()=> {
-    document.querySelectorAll('.progressBar').forEach(el=>{
-      const w = el.style.width; el.style.width='0%';
-      setTimeout(()=> el.style.width = w, 40);
+  requestAnimationFrame(()=>{
+    document.querySelectorAll('.progressBar').forEach(b=>{
+      const f=b.style.width;
+      b.style.width='0%';
+      setTimeout(()=>b.style.width=f,40);
     });
   });
 }
 
-function escapeHtml(s){ return (s||'').toString().replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#39;"); }
+function escapeHtml(s){
+  return (s||"").toString()
+  .replaceAll("&","&amp;")
+  .replaceAll("<","&lt;")
+  .replaceAll(">","&gt;")
+  .replaceAll('"',"&quot;")
+  .replaceAll("'","&#39;");
+}
 
 load();
 </script>

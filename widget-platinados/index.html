@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Platinados — Widget Compact</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cover-size:72px; --gap:10px; --card-radius:12px; --track:#dde6cf; --fill:#8ea87f; --text:#7a876f; --muted:#6b6f63; font-family:Inter,system-ui,Arial;
+  }
+  body{margin:0;padding:8px;background:transparent}
+  .wrap{width:320px;display:flex;flex-direction:column;gap:10px}
+  .small-card{display:flex;gap:var(--gap);align-items:center;background:rgba(255,255,255,0.04);padding:8px;border-radius:var(--card-radius);backdrop-filter:blur(6px);}
+  .cover{width:var(--cover-size);height:var(--cover-size);border-radius:8px;overflow:hidden;background:#f2efe9;flex:0 0 var(--cover-size);display:flex;align-items:center;justify-content:center}
+  .cover img{width:100%;height:100%;object-fit:cover;display:block}
+  .meta{flex:1;display:flex;flex-direction:column;gap:6px}
+  .title{font-size:13px;font-weight:600;color:var(--text);line-height:1.05}
+  .sub{font-size:12px;color:var(--muted)}
+  .ach-row{display:flex;align-items:center;gap:8px;margin-top:4px}
+  .ach-bar{flex:1;height:10px;border-radius:999px;background:var(--track);overflow:hidden;border:1px solid rgba(0,0,0,0.04)}
+  .ach-fill{height:100%;background:linear-gradient(90deg,var(--fill),#bcd7a9);width:0%;transition:width .6s ease}
+  .ach-text{font-size:12px;color:var(--text);min-width:54px;text-align:right}
+  .medal{width:36px;height:36px;flex:0 0 36px;display:flex;align-items:center;justify-content:center}
+  .medal img{width:34px;height:34px;display:block}
+  .empty{font-size:13px;color:var(--muted);padding:8px;text-align:center}
+</style>
+</head>
+<body>
+  <div id="platinados" class="wrap">
+    <div class="empty">Carregando platinados…</div>
+  </div>
+
+<script>
+const DATA_URL = "https://docs.google.com/spreadsheets/d/11SMM610HvJDn1WJBHsQtsTS-Uz9CNMIaRV4YNBPbtBo/gviz/tq?tqx=out:json&sheet=Sheet1";
+function parseGviz(text){ const jsonText = text.replace(/^[^\{]*/, '').replace(/\);?$/, ''); return JSON.parse(jsonText); }
+function buildHeaderMap(json){ const map={}; json.table.cols.forEach((c,i)=>{ map[(c.label||'').toString().trim().toLowerCase()]=i; }); return map; }
+function escapeHtml(s){ return (s||'').toString().replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#39;"); }
+
+async function loadPlatinados(){
+  const container = document.getElementById('platinados');
+  try{
+    const res = await fetch(DATA_URL);
+    if(!res.ok) throw new Error('fetch ' + res.status);
+    const text = await res.text();
+    const json = parseGviz(text);
+    const head = buildHeaderMap(json);
+    const rows = json.table.rows || []; const items = [];
+    rows.forEach(r => {
+      const cells = r.c || [];
+      const get = name => { const idx = head[name.toLowerCase()]; return idx!==undefined && cells[idx] ? cells[idx].v : undefined; };
+      const status = (get('status')||'').toString();
+      const titulo = get('título')||get('titulo')||get('title')||'Sem título';
+      const plataforma = get('plataforma')||get('platform')||'';
+      const progressoRaw = get('progresso') || get('progress') || 0;
+      const progresso = (typeof progressoRaw === 'number') ? Math.round(progressoRaw*100) : Number(progressoRaw)||0;
+      const capa = get('capa') || get('cover') || '';
+      const madeRaw = get('conquistasfeitas') ?? get('achievementsmade');
+      const totalRaw = get('conquistastotais') ?? get('achievementstotal');
+      let made = madeRaw===undefined ? undefined : Number(madeRaw);
+      let total = totalRaw===undefined ? undefined : Number(totalRaw);
+      if(made===undefined && total===undefined){
+        const both = get('conquistas') || get('achievements') || '';
+        if(both && both.toString().includes('/')){ const p = both.toString().split('/'); made = Number(p[0])||0; total = Number(p[1])||0; }
+      }
+      const medalURL = get('medalurl') || get('medal') || '';
+      const isPlatin = (status||'').toLowerCase().includes('platin') || progresso >= 100;
+      if(isPlatin) items.push({titulo,plataforma,progresso,capa,made,total,medalURL,status});
+    });
+    if(items.length===0){ container.innerHTML='<div class="empty">Nenhum platinado</div>'; return; }
+    container.innerHTML=''; items.forEach(it => container.appendChild(makeCompactCard(it)));
+  }catch(e){
+    console.error(e); document.getElementById('platinados').innerHTML = `<div class="empty">Erro ao carregar (veja console)</div>`;
+  }
+}
+function makeCompactCard(it){
+  const wrap = document.createElement('div'); wrap.className='small-card';
+  let percent=0, achText='—';
+  if(typeof it.made==='number' && typeof it.total==='number' && it.total>0){ percent = Math.round((it.made/it.total)*100); achText = `${it.made} / ${it.total}`; }
+  else if(it.progresso){ percent = it.progresso; achText = `${percent}%`; }
+  let medalHTML = '';
+  if((typeof it.total==='number' && it.total>0 && it.made===it.total) || percent>=100){
+    const imgURL = it.medalURL && it.medalURL.toString().trim() ? it.medalURL.toString().trim() : ('data:image/svg+xml;utf8,' + defaultMedalSVG());
+    medalHTML = `<div class="medal"><img src="${imgURL}" alt="medal"></div>`;
+  } else medalHTML = `<div style="width:36px"></div>`;
+  const coverSrc = it.capa && it.capa.toString().trim() ? it.capa.toString().trim() : '';
+  wrap.innerHTML = `
+    <div class="cover"><img src="${coverSrc}" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'300\\' height=\\'200\\'><rect width=\\'100%\\' height=\\'100%\\' fill=\\'%23e7e7df\\'/><text x=\\'50%\\' y=\\'50%\\' text-anchor=\\'middle\\' dominant-baseline=\\'middle\\' fill=\\'%238b8b7a\\' font-family=\\'Inter\\' font-size=18>no image</text></svg>'"></div>
+    <div class="meta">
+      <div class="title">${escapeHtml(it.titulo)}</div>
+      <div class="sub">${escapeHtml(it.plataforma)}</div>
+      <div class="ach-row">
+        <div class="ach-bar"><div class="ach-fill" style="width:${percent}%"></div></div>
+        <div class="ach-text">${escapeHtml(achText)}</div>
+      </div>
+    </div>
+    ${medalHTML}
+  `;
+  return wrap;
+}
+function defaultMedalSVG(){ return encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><defs><linearGradient id='g' x1='0' x2='1'><stop offset='0' stop-color='#e6eef0'/><stop offset='1' stop-color='#cfdfe0'/></linearGradient></defs><g transform='translate(8,6)'><circle cx='40' cy='32' r='24' fill='url(#g)' stroke='#bfcfcf' stroke-width='2'/><path d='M40 20 L46 34 L62 36 L50 46 L52 62 L40 54 L28 62 L30 46 L18 36 L34 34 Z' fill='#f8f9fa' opacity='0.95' transform='translate(0,0) scale(.9) translate(4,3)'/><rect x='20' y='56' width='40' height='10' rx='3' fill='#dfe9dd'/></g></svg>`); }
+loadPlatinados();
+</script>
+</body>
+</html>
